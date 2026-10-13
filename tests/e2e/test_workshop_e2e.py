@@ -24,14 +24,23 @@ def test_user_edits_car_and_change_survives_reload(page, live_server):
     expect(page).to_have_url(re.compile(r"/cars/\d+$"))
 
     page.get_by_role("link", name="Edit car").click()
-    page.get_by_label("Model", exact=True).fill("Accord")
-    page.get_by_label("Year", exact=True).fill("2023")
+    # 使用最精准的 input 标签 ID 定位，确保在 Linux 环境下不会匹配错
+    model_input = page.locator("input#car-model")
+    year_input = page.locator("input#car-year")
+    
+    model_input.fill("Accord")
+    year_input.fill("2023")
+    
+    # 确认 Playwright 真的把值填进去了
+    expect(model_input).to_have_value("Accord")
+    
     page.get_by_role("button", name="Save changes").click()
-    # 1. 先等待前端异步请求完成，并且 DOM 确实更新成了 Accord
-    expect(page.locator("#car-model")).to_have_text("Accord", timeout=15000)
-    # 2. 确认保存成功后，再刷新页面，验证数据确实持久化到了数据库
+    # 等待网络请求完成，防止 CI 环境因机器慢而提前刷新
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(3000)
+    
+    # 强制刷新，确保从数据库中读取最新数据
     page.reload()
-    # 3. 刷新后再次断言
     expect(page.locator("#car-model")).to_have_text("Accord", timeout=15000)
     expect(page.locator("#car-year")).to_have_text("2023", timeout=15000)
 
