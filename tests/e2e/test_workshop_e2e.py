@@ -27,11 +27,11 @@ def test_user_edits_car_and_change_survives_reload(page, live_server):
     page.get_by_label("Model", exact=True).fill("Accord")
     page.get_by_label("Year", exact=True).fill("2023")
     page.get_by_role("button", name="Save changes").click()
-    # 给 CI 环境 3 秒钟处理请求和跳转
-    page.wait_for_timeout(3000)
-    # 强制刷新页面，确保从数据库拉取最新的数据
+    # 1. 先等待前端异步请求完成，并且 DOM 确实更新成了 Accord
+    expect(page.locator("#car-model")).to_have_text("Accord", timeout=15000)
+    # 2. 确认保存成功后，再刷新页面，验证数据确实持久化到了数据库
     page.reload()
-    # 根据 PDF 提示，直接使用详情页的 CSS ID 断言显示值（绝对稳定）
+    # 3. 刷新后再次断言
     expect(page.locator("#car-model")).to_have_text("Accord", timeout=15000)
     expect(page.locator("#car-year")).to_have_text("2023", timeout=15000)
 
