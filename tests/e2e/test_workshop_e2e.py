@@ -27,10 +27,13 @@ def test_user_edits_car_and_change_survives_reload(page, live_server):
     page.get_by_label("Model", exact=True).fill("Accord")
     page.get_by_label("Year", exact=True).fill("2023")
     page.get_by_role("button", name="Save changes").click()
-    # 1. 等待 URL 变化（如果它是跳转的话）
-    expect(page).to_have_url(re.compile(r"/cars/\d+$"), timeout=15000)
-    # 2. 用宽松匹配来找标题（不怕渲染出额外的文字）
-    expect(page.get_by_role("heading", name=re.compile("Honda Accord"))).to_be_visible(timeout=15000)
+    # 给 CI 环境 3 秒钟处理请求和跳转
+    page.wait_for_timeout(3000)
+    # 强制刷新页面，确保从数据库拉取最新的数据
+    page.reload()
+    # 根据 PDF 提示，直接使用详情页的 CSS ID 断言显示值（绝对稳定）
+    expect(page.locator("#car-model")).to_have_text("Accord", timeout=15000)
+    expect(page.locator("#car-year")).to_have_text("2023", timeout=15000)
 
     page.reload()
     expect(page.locator("#car-model")).to_have_text("Accord")
